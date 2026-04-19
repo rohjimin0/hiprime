@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     SELECT * FROM T_COMPONENT
     WHERE product_id IS NULL OR product_id = ?
     ORDER BY deduct_amount DESC
-  `).all(product_id) as Component[]
+  `).all(product_id) as unknown as Component[]
   const deductions = allComponents.map(comp => ({
     comp,
     selected: selected_component_ids.includes(comp.comp_id),
