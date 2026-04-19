@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(cmd /c \"where npm\")",
+      "Bash(cmd /c \"where node\")",
+      "Bash(cmd /c \"node --version\")",
+      "Bash(cmd /c \"npm --version\")",
+      "Read(//c/Program Files/**)",
+      "Read(//c/Users/PC/scoop/apps/**)",
+      "Read(//c/Users/PC/.nvm/**)",
+      "Read(//c/Users/PC/**)",
+      "Bash(powershell -Command \"node --version; npm --version\")",
+      "mcp__Claude_Preview__preview_start",
+      "mcp__Claude_in_Chrome__tabs_context_mcp"
+    ]
+  }
+}

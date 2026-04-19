@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand: #2E6DA4;
+}
+
+body {
+  font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  background-color: #F8FAFC;
+  color: #1E293B;
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-brand-500 hover:bg-brand-600 text-white font-semibold px-6 py-3 rounded-xl transition-colors;
+  }
+  .btn-outline {
+    @apply border-2 border-brand-500 text-brand-500 hover:bg-brand-50 font-semibold px-6 py-3 rounded-xl transition-colors;
+  }
+  .card {
+    @apply bg-white rounded-2xl shadow-sm border border-slate-100 p-6;
+  }
+  .badge-grade {
+    @apply inline-flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm;
+  }
+}
