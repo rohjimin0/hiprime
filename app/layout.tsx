@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
-import { getDb } from '@/lib/db'
+import { sql } from '@/lib/db'
 
 export const metadata: Metadata = {
   title: 'HiPRIME 하이프라임 — 스마트폰 최고가 매입',
@@ -9,8 +9,7 @@ export const metadata: Metadata = {
 
 async function getSiteSettings(): Promise<Record<string, string>> {
   try {
-    const db = await getDb()
-    const rows = db.prepare('SELECT key, value FROM T_SITE_SETTINGS').all() as { key: string; value: string }[]
+    const rows = await sql`SELECT key, value FROM T_SITE_SETTINGS` as { key: string; value: string }[]
     const s: Record<string, string> = {}
     for (const r of rows) s[r.key] = r.value
     return s

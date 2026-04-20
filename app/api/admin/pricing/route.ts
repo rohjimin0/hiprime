@@ -1,32 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getDb } from '@/lib/db'
+import { sql } from '@/lib/db'
 
 export async function GET() {
-  const db = await getDb()
-  const rules = db.prepare(`
+  const rules = await sql`
     SELECT r.*, p.brand, p.model_name, p.storage
     FROM T_PRICING_RULE r
     JOIN T_PRODUCT p ON r.product_id = p.product_id
     ORDER BY p.brand, p.model_name, p.storage, r.grade
-  `).all()
+  `
   return NextResponse.json(rules)
 }
 
 export async function PUT(req: NextRequest) {
-  const db = await getDb()
   const { rule_id, base_price, valid_from, valid_to, updated_by } = await req.json()
 
-  const old = db.prepare('SELECT * FROM T_PRICING_RULE WHERE rule_id = ?').get(rule_id)
-  db.prepare(`
+  const [old] = await sql`SELECT * FROM T_PRICING_RULE WHERE rule_id = ${rule_id}`
+  await sql`
     UPDATE T_PRICING_RULE
-    SET base_price = ?, valid_from = ?, valid_to = ?, updated_by = ?, updated_at = datetime('now')
-    WHERE rule_id = ?
-  `).run(base_price, valid_from ?? null, valid_to ?? null, updated_by ?? 'admin', rule_id)
-
-  db.prepare(`
+    SET base_price  = ${base_price},
+        valid_from  = ${valid_from ?? null},
+        valid_to    = ${valid_to ?? null},
+        updated_by  = ${updated_by ?? 'admin'},
+        updated_at  = NOW()
+    WHERE rule_id = ${rule_id}
+  `
+  await sql`
     INSERT INTO T_AUDIT_LOG (action, target_table, target_id, old_value, new_value, changed_by)
-    VALUES ('UPDATE', 'T_PRICING_RULE', ?, ?, ?, ?)
-  `).run(rule_id, JSON.stringify(old), JSON.stringify({ base_price, valid_from, valid_to }), updated_by ?? 'admin')
+    VALUES ('UPDATE', 'T_PRICING_RULE', ${rule_id}, ${JSON.stringify(old)}, ${JSON.stringify({ base_price, valid_from, valid_to })}, ${updated_by ?? 'admin'})
+  `
 
   return NextResponse.json({ ok: true })
 }

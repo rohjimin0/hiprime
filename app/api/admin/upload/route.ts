@@ -1,8 +1,5 @@
 import { NextResponse } from 'next/server'
-import path from 'path'
-import fs from 'fs'
-
-const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads')
+import { put } from '@vercel/blob'
 
 export async function POST(req: Request) {
   const formData = await req.formData()
@@ -15,11 +12,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: '이미지 파일만 업로드 가능합니다.' }, { status: 400 })
   }
 
-  if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true })
+  const filename = `uploads/${Date.now()}.${ext}`
+  const blob = await put(filename, file, { access: 'public' })
 
-  const filename = `${Date.now()}.${ext}`
-  const buffer = Buffer.from(await file.arrayBuffer())
-  fs.writeFileSync(path.join(UPLOAD_DIR, filename), buffer)
-
-  return NextResponse.json({ url: `/uploads/${filename}` })
+  return NextResponse.json({ url: blob.url })
 }

@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server'
-import { getDb } from '@/lib/db'
+import { sql } from '@/lib/db'
 
 export async function GET() {
-  const db = await getDb()
-  const categories = db.prepare('SELECT * FROM T_CATEGORY ORDER BY sort_order').all()
-  return NextResponse.json(categories)
+  const rows = await sql`
+    SELECT * FROM T_CATEGORY
+    ORDER BY parent_id ASC NULLS FIRST, sort_order ASC
+  `
+  return NextResponse.json(rows)
 }

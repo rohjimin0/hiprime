@@ -1,10 +1,9 @@
-import { getDb } from '@/lib/db'
+import { sql } from '@/lib/db'
 import HomeWidget from './HomeWidget'
 
 async function getSiteSettings(): Promise<Record<string, string>> {
   try {
-    const db = await getDb()
-    const rows = db.prepare('SELECT key, value FROM T_SITE_SETTINGS').all() as { key: string; value: string }[]
+    const rows = await sql`SELECT key, value FROM T_SITE_SETTINGS` as { key: string; value: string }[]
     const s: Record<string, string> = {}
     for (const r of rows) s[r.key] = r.value
     return s
@@ -20,7 +19,7 @@ export default async function HomePage() {
   const kakaoLink = s['kakao.link']      || 'https://pf.kakao.com/_XXXXX'
 
   const choose = {
-    title:    s['choose.title']    || '어떤 분이신가요?',
+    title:    s['choose.title']     || '어떤 분이신가요?',
     indImage: s['choose.ind.image'] || '',
     indTitle: s['choose.ind.title'] || '개인 고객',
     indDesc:  s['choose.ind.desc']  || '내 기기 시세 바로 확인하기',
@@ -33,14 +32,12 @@ export default async function HomePage() {
 
   return (
     <div>
-      {/* 메인 배너 — 이미지만, 텍스트 없음 */}
       {heroImage && (
         <section className="w-full">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={heroImage} alt="메인 배너" className="w-full block" />
         </section>
       )}
-
       <HomeWidget kakaoLink={kakaoLink} choose={choose} />
     </div>
   )
