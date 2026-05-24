@@ -17,12 +17,12 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const { cat_name, parent_id, sort_order } = await req.json()
-    const [result] = await sql`
+    const rows = await sql`
       INSERT INTO T_CATEGORY (cat_name, parent_id, sort_order)
       VALUES (${cat_name}, ${parent_id ?? null}, ${sort_order ?? 0})
       RETURNING cat_id
-    `
-    return NextResponse.json({ cat_id: result.cat_id })
+    ` as { cat_id: number }[]
+    return NextResponse.json({ cat_id: rows[0].cat_id })
   } catch (err) {
     console.error(err)
     return NextResponse.json({ error: 'DB 오류' }, { status: 500 })
@@ -48,12 +48,12 @@ export async function DELETE(req: Request) {
   try {
     const { cat_id } = await req.json()
 
-    const [children] = await sql`SELECT COUNT(*) AS cnt FROM T_CATEGORY WHERE parent_id = ${cat_id}`
-    if (Number(children.cnt) > 0)
+    const childRows = await sql`SELECT COUNT(*) AS cnt FROM T_CATEGORY WHERE parent_id = ${cat_id}` as { cnt: number | string }[]
+    if (Number(childRows[0]?.cnt ?? 0) > 0)
       return NextResponse.json({ error: '하위 카테고리가 있어 삭제할 수 없습니다.' }, { status: 400 })
 
-    const [products] = await sql`SELECT COUNT(*) AS cnt FROM T_PRODUCT WHERE cat_id = ${cat_id}`
-    if (Number(products.cnt) > 0)
+    const prodRows = await sql`SELECT COUNT(*) AS cnt FROM T_PRODUCT WHERE cat_id = ${cat_id}` as { cnt: number | string }[]
+    if (Number(prodRows[0]?.cnt ?? 0) > 0)
       return NextResponse.json({ error: '연결된 상품이 있어 삭제할 수 없습니다.' }, { status: 400 })
 
     await sql`DELETE FROM T_CATEGORY WHERE cat_id = ${cat_id}`
