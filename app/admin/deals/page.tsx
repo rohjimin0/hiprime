@@ -1,5 +1,18 @@
-'use client'
-import { useEffect, useState } from 'react'
+﻿'use client'
+import { useEffect, useState, useCallback } from 'react'
+
+const STATUS_LABELS: Record<string, string> = {
+  pending:    '대기 중',
+  processing: '처리 중',
+  completed:  '완료',
+  cancelled:  '취소',
+}
+const STATUS_COLORS: Record<string, string> = {
+  pending:    'bg-yellow-100 text-yellow-800',
+  processing: 'bg-blue-100 text-blue-800',
+  completed:  'bg-green-100 text-green-800',
+  cancelled:  'bg-slate-100 text-slate-500',
+}
 
 interface Deal {
   request_id: number
@@ -14,88 +27,94 @@ interface Deal {
   created_at: string
 }
 
-export default function AdminDealsPage() {
+export default function DealsPage() {
   const [deals, setDeals] = useState<Deal[]>([])
+  const [filter, setFilter] = useState('')
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    fetch('/api/deals').then(r => r.json()).then(data => {
-      setDeals(data)
-      setLoading(false)
-    })
-  }, [])
+  const load = useCallback(() => {
+    setLoading(true)
+    const url = filter ? `/api/admin/deals?status=${filter}` : '/api/admin/deals'
+    fetch(url)
+      .then(r => r.json())
+      .then(data => { setDeals(data); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [filter])
 
-  function downloadCsv() {
-    const headers = ['접수번호', '브랜드', '모델명', '용량', '등급', '견적가', '연락처', '방식', '상태', '접수일시']
-    const rows = deals.map(d => [
-      d.request_id, d.brand, d.model_name, d.storage, d.grade,
-      d.final_price, d.contact ?? '', d.method ?? '', d.status, d.created_at,
-    ])
-    const csv = [headers, ...rows].map(r => r.join(',')).join('\n')
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url; a.download = 'deals.csv'; a.click()
-    URL.revokeObjectURL(url)
+  useEffect(() => { load() }, [load])
+
+  const updateStatus = async (request_id: number, status: string) => {
+    await fetch('/api/admin/deals', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ request_id, status }),
+    })
+    load()
   }
+
+  const fmt = (n: number) => n.toLocaleString('ko-KR') + '원'
+  const date = (s: string) => new Date(s).toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' })
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-extrabold text-slate-800">거래 내역</h1>
-        <button onClick={downloadCsv} className="btn-outline py-2 text-sm">⬇ 엑셀(CSV) 내보내기</button>
+        <div className="flex gap-2">
+          {['', 'pending', 'processing', 'completed', 'cancelled'].map(s => (
+            <button
+              key={s}
+              onClick={() => setFilter(s)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                filter === s
+                  ? 'bg-brand-500 text-white'
+                  : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              {s === '' ? '전체' : STATUS_LABELS[s]}
+            </button>
+          ))}
+        </div>
       </div>
 
       {loading ? (
-        <p className="text-slate-400">불러오는 중...</p>
+        <p className="text-slate-400 text-center py-12">불러오는 중...</p>
       ) : deals.length === 0 ? (
-        <div className="card text-center py-16 text-slate-400">아직 거래 신청이 없습니다.</div>
+        <p className="text-slate-400 text-center py-12">거래 내역이 없습니다.</p>
       ) : (
-        <div className="card overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-200">
-                {['#', '모델', '등급', '견적가', '방식', '연락처', '상태', '접수일'].map(h => (
-                  <th key={h} className="text-left py-3 px-3 text-slate-500 font-medium whitespace-nowrap">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {deals.map(d => (
-                <tr key={d.request_id} className="border-b border-slate-50 hover:bg-slate-50">
-                  <td className="py-3 px-3 text-slate-400">#{d.request_id}</td>
-                  <td className="py-3 px-3 font-medium text-slate-800 whitespace-nowrap">
-                    {d.brand} {d.model_name} {d.storage}
-                  </td>
-                  <td className="py-3 px-3">
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                      d.grade === 'S' ? 'bg-emerald-100 text-emerald-700' :
-                      d.grade === 'A' ? 'bg-blue-100 text-blue-700' :
-                      d.grade === 'B' ? 'bg-yellow-100 text-yellow-700' :
-                                        'bg-red-100 text-red-700'
-                    }`}>{d.grade}</span>
-                  </td>
-                  <td className="py-3 px-3 font-semibold text-brand-500">
-                    {d.final_price.toLocaleString()}원
-                  </td>
-                  <td className="py-3 px-3 text-slate-600">
-                    {d.method === 'visit' ? '방문' : d.method === 'shipping' ? '택배' : '—'}
-                  </td>
-                  <td className="py-3 px-3 text-slate-600">{d.contact ?? '—'}</td>
-                  <td className="py-3 px-3">
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                      d.status === 'pending' ? 'bg-amber-100 text-amber-700' :
-                      d.status === 'done'    ? 'bg-emerald-100 text-emerald-700' :
-                                              'bg-slate-100 text-slate-500'
-                    }`}>{d.status}</span>
-                  </td>
-                  <td className="py-3 px-3 text-slate-400 text-xs whitespace-nowrap">
-                    {d.created_at.slice(0, 16).replace('T', ' ')}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="space-y-3">
+          {deals.map(d => (
+            <div key={d.request_id} className="card flex flex-col sm:flex-row sm:items-center gap-4">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className={`px-2 py-0.5 rounded text-xs font-semibold ${STATUS_COLORS[d.status] ?? 'bg-slate-100 text-slate-500'}`}>
+                    {STATUS_LABELS[d.status] ?? d.status}
+                  </span>
+                  <span className="text-xs text-slate-400">{date(d.created_at)}</span>
+                </div>
+                <p className="font-semibold text-slate-800">
+                  {d.brand} {d.model_name} {d.storage} · {d.grade}등급
+                </p>
+                <p className="text-sm text-slate-500 mt-0.5">
+                  제시가: <strong className="text-slate-800">{fmt(d.final_price)}</strong>
+                  {d.contact && <> · {d.contact}</>}
+                  {d.method && <> · {d.method === 'visit' ? '방문' : '택배'}</>}
+                </p>
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                {['pending', 'processing', 'completed', 'cancelled']
+                  .filter(s => s !== d.status)
+                  .map(s => (
+                    <button
+                      key={s}
+                      onClick={() => updateStatus(d.request_id, s)}
+                      className="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+                    >
+                      {`→ ${STATUS_LABELS[s]}`}
+                    </button>
+                  ))}
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>

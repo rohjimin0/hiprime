@@ -1,21 +1,10 @@
 import type { Metadata } from 'next'
 import './globals.css'
-import { sql } from '@/lib/db'
+import { getSiteSettings } from '@/lib/site-settings'
 
 export const metadata: Metadata = {
   title: 'HiPRIME 하이프라임 — 스마트폰 최고가 매입',
   description: '가장 간단하게, 가장 확실하게. 오늘 바로, 최고가로.',
-}
-
-async function getSiteSettings(): Promise<Record<string, string>> {
-  try {
-    const rows = await sql`SELECT key, value FROM T_SITE_SETTINGS` as { key: string; value: string }[]
-    const s: Record<string, string> = {}
-    for (const r of rows) s[r.key] = r.value
-    return s
-  } catch {
-    return {}
-  }
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
